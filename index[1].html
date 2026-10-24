@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melati Residence - Sistem Stok & Kasir</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-amber-50/40 text-slate-800 min-h-screen pb-20">
+
+    <!-- Header / Navbar -->
+    <header class="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white sticky top-0 z-30 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-2xl font-extrabold tracking-tight">Melati Residence</h1>
+                        <span id="dbBadge" class="bg-amber-800/60 text-amber-100 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-300/30">
+                            Database: Local
+                        </span>
+                    </div>
+                    <p class="text-orange-100 text-xs mt-0.5">Sistem Manajemen Stok, Kasir & Laporan Untung/Rugi</p>
+                </div>
+
+                <!-- Main Actions Header -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="openModal('addModal')" class="bg-white/20 hover:bg-white/30 text-white border border-white/30 px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                        + Varian Produk
+                    </button>
+                    <button onclick="openModal('restockModal')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow transition">
+                        + Restok Produk
+                    </button>
+                    <button onclick="openCartModal()" class="bg-orange-700 hover:bg-orange-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-white/20">
+                        <span>🛒 Transaksi Jual</span>
+                        <span id="cartBadge" class="bg-white text-orange-600 text-[10px] px-1.5 py-0.5 rounded-full font-black">0</span>
+                    </button>
+                    <button onclick="openReportModal()" class="bg-amber-800/80 hover:bg-amber-900 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                        Laporan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        
+        <!-- Search & Filter Bar -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-amber-100 mb-6 flex flex-col md:flex-row gap-3 justify-between items-center">
+            <div class="w-full md:w-auto flex-1 flex flex-col sm:flex-row gap-2">
+                <input type="text" id="searchInput" oninput="renderProducts()" placeholder="Cari nama produk..." 
+                    class="w-full sm:w-72 pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50">
+                <select id="categoryFilter" onchange="renderProducts()" class="py-2.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 font-medium text-slate-700">
+                    <option value="">Semua Kategori / Tipe</option>
+                    <option value="Makanan / Snack">Makanan / Snack</option>
+                    <option value="Minuman">Minuman</option>
+                    <option value="Sembako">Sembako</option>
+                    <option value="Kebutuhan Harian">Kebutuhan Harian</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-4 text-xs font-semibold text-slate-500 w-full md:w-auto justify-between md:justify-end">
+                <span id="totalVariantsCount">0 Varian</span>
+                <span class="text-slate-300">|</span>
+                <span id="totalStockCount">0 Total Pcs</span>
+            </div>
+        </div>
+
+        <!-- Product Cards Grid -->
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <!-- Dynamic products will be rendered here -->
+        </div>
+
+    </main>
+
+    <!-- MODAL: TAMBAH VARIAN BARU -->
+    <div id="addModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Tambah Varian Produk Baru</h3>
+            <form id="addProductForm" onsubmit="handleAddProduct(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nama Produk / Varian</label>
+                    <input type="text" id="addName" required placeholder="Contoh: Chiki Balls Keju 55g" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Tipe / Kategori Produk</label>
+                    <select id="addCategory" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                        <option value="Makanan / Snack">Makanan / Snack</option>
+                        <option value="Minuman">Minuman</option>
+                        <option value="Sembako">Sembako</option>
+                        <option value="Kebutuhan Harian">Kebutuhan Harian</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Harga Jual Satuan (Rp)</label>
+                    <input type="number" id="addPrice" min="0" required placeholder="5000" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Stok Awal (Pcs)</label>
+                        <input type="number" id="addInitialStock" min="0" value="0" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Harga Beli Awal /Pcs (Rp)</label>
+                        <input type="number" id="addInitialCost" min="0" value="0" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('addModal')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white">Simpan Produk</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RESTOK PRODUK -->
+    <div id="restockModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">+ Restok Produk (Batch Baru)</h3>
+            <form id="restockForm" onsubmit="handleRestock(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Pilih Produk</label>
+                    <select id="restockProductId" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                        <!-- Options generated dynamically -->
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Jumlah Restok (Pcs)</label>
+                        <input type="number" id="restockQty" min="1" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Harga Beli Baru /Pcs (Rp)</label>
+                        <input type="number" id="restockCost" min="0" required class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('restockModal')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white">Simpan Restok</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: KASIR / CART -->
+    <div id="cartModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">🛒 Transaksi Penjualan</h3>
+            <div id="cartItemsList" class="max-h-60 overflow-y-auto divide-y mb-4">
+                <!-- Cart items rendered dynamically -->
+            </div>
+            
+            <div class="bg-slate-50 p-4 rounded-xl space-y-2 mb-4 text-sm">
+                <div class="flex justify-between font-bold text-slate-700">
+                    <span>Total Pembayaran:</span>
+                    <span id="cartTotalText" class="text-orange-600 font-extrabold text-base">Rp 0</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Metode Pembayaran</label>
+                    <select id="cartPaymentMethod" class="w-full px-3 py-1.5 border rounded-lg text-xs outline-none">
+                        <option value="CASH">Tunai (Cash)</option>
+                        <option value="QRIS">QRIS</option>
+                        <option value="TRANSFER">Transfer Bank</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('cartModal')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Batal</button>
+                <button onclick="handleCheckout()" class="px-5 py-2 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white">Proses Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: LAPORAN (UNTUNG / RUGI & OPERATIONAL EXPENSES) -->
+    <div id="reportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="text-xl font-extrabold text-slate-800">Laporan Keuangan Melati Residence</h3>
+                    <p class="text-xs text-slate-500">Ringkasan Omset, Modal, Pengeluaran & Profit Bersih Real</p>
+                </div>
+                <button onclick="openModal('expenseModal')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow">
+                    + Catat Pengeluaran Toko
+                </button>
+            </div>
+
+            <!-- Financial Table -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl mb-6">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 text-xs font-extrabold uppercase border-b">
+                            <th class="p-3">Komponen Laporan</th>
+                            <th class="p-3 text-right">Harian (Hari Ini)</th>
+                            <th class="p-3 text-right">Bulanan (Bulan Ini)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 font-medium">
+                        <tr>
+                            <td class="p-3 text-slate-600">Total Omset (Penjualan)</td>
+                            <td id="dailyOmset" class="p-3 text-right font-bold text-slate-800">Rp 0</td>
+                            <td id="monthlyOmset" class="p-3 text-right font-bold text-slate-800">Rp 0</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 text-slate-600">Total Modal Produk Terjual (FIFO)</td>
+                            <td id="dailyModal" class="p-3 text-right font-bold text-slate-800">Rp 0</td>
+                            <td id="monthlyModal" class="p-3 text-right font-bold text-slate-800">Rp 0</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 text-slate-600">Pengeluaran Operasional Toko</td>
+                            <td id="dailyExpense" class="p-3 text-right font-bold text-rose-600">Rp 0</td>
+                            <td id="monthlyExpense" class="p-3 text-right font-bold text-rose-600">Rp 0</td>
+                        </tr>
+                        <tr class="bg-orange-50/60 font-extrabold">
+                            <td class="p-3 text-orange-900">Profit / Keuntungan Bersih Real</td>
+                            <td id="dailyProfit" class="p-3 text-right text-emerald-700 font-black text-base">Rp 0</td>
+                            <td id="monthlyProfit" class="p-3 text-right text-emerald-700 font-black text-base">Rp 0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="closeModal('reportModal')" class="px-5 py-2 rounded-xl text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CATAT PENGELUARAN TOKO -->
+    <div id="expenseModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">+ Catat Pengeluaran Toko</h3>
+            <form id="expenseForm" onsubmit="handleAddExpense(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Keterangan / Keperluan</label>
+                    <input type="text" id="expenseDesc" required placeholder="Contoh: Beli Kantong Plastik & Lakban" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Nominal Pengeluaran (Rp)</label>
+                    <input type="number" id="expenseAmount" min="1" required placeholder="15000" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('expenseModal')" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white">Simpan Pengeluaran</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic & Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+        // Paste your Firebase Config keys here:
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        let db = null;
+        let isFirebaseActive = false;
+
+        // Global State
+        window.state = {
+            products: [],
+            sales: [],
+            expenses: [],
+            cart: {} // productId -> qty
+        };
+
+        // Initialize App & Firebase
+        try {
+            if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+                document.getElementById('dbBadge').innerText = 'Database: Firebase Cloud';
+                document.getElementById('dbBadge').className = 'bg-emerald-800/80 text-emerald-100 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-300/30';
+                
+                // Realtime Listeners
+                onSnapshot(collection(db, "products"), (snapshot) => {
+                    window.state.products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderProducts();
+                    updateRestockOptions();
+                });
+                onSnapshot(collection(db, "sales"), (snapshot) => {
+                    window.state.sales = snapshot.docs.map(doc => doc.data());
+                });
+                onSnapshot(collection(db, "expenses"), (snapshot) => {
+                    window.state.expenses = snapshot.docs.map(doc => doc.data());
+                });
+            } else {
+                loadFromLocalStorage();
+            }
+        } catch (e) {
+            console.warn("Firebase Init Error, fallback to LocalStorage", e);
+            loadFromLocalStorage();
+        }
+
+        function loadFromLocalStorage() {
+            window.state.products = JSON.parse(localStorage.getItem('melati_products') || '[]');
+            window.state.sales = JSON.parse(localStorage.getItem('melati_sales') || '[]');
+            window.state.expenses = JSON.parse(localStorage.getItem('melati_expenses') || '[]');
+            renderProducts();
+            updateRestockOptions();
+        }
+
+        function saveToLocalStorage() {
+            if (!isFirebaseActive) {
+                localStorage.setItem('melati_products', JSON.stringify(window.state.products));
+                localStorage.setItem('melati_sales', JSON.stringify(window.state.sales));
+                localStorage.setItem('melati_expenses', JSON.stringify(window.state.expenses));
+            }
+        }
+
+        // Window Handlers for Modals & Actions
+        window.openModal = function(id) { document.getElementById(id).classList.remove('hidden'); }
+        window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); }
+
+        window.renderProducts = function() {
+            const grid = document.getElementById('productGrid');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const selectedCat = document.getElementById('categoryFilter').value;
+            grid.innerHTML = '';
+
+            const filtered = window.state.products.filter(p => {
+                const matchSearch = p.name.toLowerCase().includes(search);
+                const matchCategory = !selectedCat || p.category === selectedCat;
+                return matchSearch && matchCategory;
+            });
+            
+            let totalStock = 0;
+            filtered.forEach(p => {
+                const pStock = p.batches ? p.batches.reduce((sum, b) => sum + b.qty, 0) : 0;
+                totalStock += pStock;
+                const categoryLabel = p.category || 'Makanan / Snack';
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl p-4 shadow-sm border border-amber-100 flex flex-col justify-between hover:shadow-md transition";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start mb-1">
+                            <h4 class="font-bold text-slate-800 text-sm leading-tight">${p.name}</h4>
+                            <span class="text-xs font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-lg whitespace-nowrap">Rp ${p.sellingPrice.toLocaleString('id-ID')}</span>
+                        </div>
+                        <div class="mb-3 flex items-center gap-1.5">
+                            <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-md">${categoryLabel}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">Sisa Stok: <strong class="${pStock < 5 ? 'text-rose-600 font-extrabold' : 'text-slate-700'}">${pStock} Pcs</strong></p>
+                    </div>
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <button onclick="addToCart('${p.id}')" ${pStock === 0 ? 'disabled' : ''} class="w-full py-1.5 rounded-xl text-xs font-bold ${pStock === 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700 text-white'} transition">
+                            + Tambah ke Kasir
+                        </button>
+                        <button onclick="handleDeleteProduct('${p.id}')" class="w-full py-1 text-[11px] font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition">
+                            Hapus Produk
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('totalVariantsCount').innerText = `${filtered.length} Varian`;
+            document.getElementById('totalStockCount').innerText = `${totalStock} Total Pcs`;
+        }
+
+        window.handleAddProduct = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('addName').value.trim();
+            const category = document.getElementById('addCategory').value;
+            const sellingPrice = Number(document.getElementById('addPrice').value);
+            const qty = Number(document.getElementById('addInitialStock').value);
+            const cost = Number(document.getElementById('addInitialCost').value);
+
+            const newProduct = {
+                name,
+                category,
+                sellingPrice,
+                batches: qty > 0 ? [{ qty, costPrice: cost, createdAt: new Date().toISOString() }] : []
+            };
+
+            if (isFirebaseActive) {
+                await addDoc(collection(db, "products"), newProduct);
+            } else {
+                newProduct.id = 'p_' + Date.now();
+                window.state.products.push(newProduct);
+                saveToLocalStorage();
+                renderProducts();
+                updateRestockOptions();
+            }
+
+            closeModal('addModal');
+            document.getElementById('addProductForm').reset();
+        }
+
+        window.handleDeleteProduct = async function(id) {
+            if (!confirm("Apakah Anda yakin ingin menghapus produk ini? Semua data stok akan hilang.")) return;
+
+            if (isFirebaseActive) {
+                await deleteDoc(doc(db, "products", String(id)));
+            } else {
+                window.state.products = window.state.products.filter(p => String(p.id) !== String(id));
+                saveToLocalStorage();
+                renderProducts();
+                updateRestockOptions();
+            }
+        }
+
+        function updateRestockOptions() {
+            const select = document.getElementById('restockProductId');
+            select.innerHTML = '';
+            window.state.products.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = p.name;
+                select.appendChild(opt);
+            });
+        }
+
+        window.handleRestock = async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('restockProductId').value;
+            const qty = Number(document.getElementById('restockQty').value);
+            const costPrice = Number(document.getElementById('restockCost').value);
+
+            const product = window.state.products.find(p => String(p.id) === String(id));
+            if (!product) return;
+
+            const updatedBatches = [...(product.batches || []), { qty, costPrice, createdAt: new Date().toISOString() }];
+
+            if (isFirebaseActive) {
+                await updateDoc(doc(db, "products", String(id)), { batches: updatedBatches });
+            } else {
+                product.batches = updatedBatches;
+                saveToLocalStorage();
+                renderProducts();
+            }
+
+            closeModal('restockModal');
+            document.getElementById('restockForm').reset();
+        }
+
+        // Cart & POS Logic
+        window.addToCart = function(id) {
+            const product = window.state.products.find(p => String(p.id) === String(id));
+            const currentStock = product.batches ? product.batches.reduce((sum, b) => sum + b.qty, 0) : 0;
+            const inCart = window.state.cart[id] || 0;
+
+            if (inCart + 1 > currentStock) {
+                alert("Stok tidak mencukupi!");
+                return;
+            }
+
+            window.state.cart[id] = inCart + 1;
+            updateCartBadge();
+        }
+
+        function updateCartBadge() {
+            const totalItems = Object.values(window.state.cart).reduce((a, b) => a + b, 0);
+            document.getElementById('cartBadge').innerText = totalItems;
+        }
+
+        window.openCartModal = function() {
+            renderCartItems();
+            openModal('cartModal');
+        }
+
+        function renderCartItems() {
+            const list = document.getElementById('cartItemsList');
+            list.innerHTML = '';
+            let total = 0;
+
+            Object.entries(window.state.cart).forEach(([id, qty]) => {
+                const p = window.state.products.find(item => String(item.id) === String(id));
+                if (!p) return;
+
+                const subtotal = p.sellingPrice * qty;
+                total += subtotal;
+
+                const row = document.createElement('div');
+                row.className = "py-2 flex justify-between items-center text-sm";
+                row.innerHTML = `
+                    <div>
+                        <div class="font-bold text-slate-800">${p.name}</div>
+                        <div class="text-xs text-slate-500">Rp ${p.sellingPrice.toLocaleString('id-ID')} x ${qty}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-slate-800">Rp ${subtotal.toLocaleString('id-ID')}</span>
+                        <button onclick="removeFromCart('${id}')" class="text-rose-600 font-bold px-2 py-0.5 rounded bg-rose-50 hover:bg-rose-100">✕</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+
+            document.getElementById('cartTotalText').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+        }
+
+        window.removeFromCart = function(id) {
+            delete window.state.cart[id];
+            updateCartBadge();
+            renderCartItems();
+        }
+
+        window.handleCheckout = async function() {
+            if (Object.keys(window.state.cart).length === 0) {
+                alert("Keranjang masih kosong!");
+                return;
+            }
+
+            let totalOmset = 0;
+            let totalCost = 0;
+            const itemsSold = [];
+
+            // Process FIFO Stock Deduction
+            for (const [id, qtyNeeded] of Object.entries(window.state.cart)) {
+                const product = window.state.products.find(p => String(p.id) === String(id));
+                let remainingToDeduct = qtyNeeded;
+                let itemCost = 0;
+
+                for (let b of product.batches) {
+                    if (b.qty <= 0) continue;
+
+                    const take = Math.min(b.qty, remainingToDeduct);
+                    b.qty -= take;
+                    remainingToDeduct -= take;
+                    itemCost += take * b.costPrice;
+
+                    if (remainingToDeduct === 0) break;
+                }
+
+                const itemOmset = product.sellingPrice * qtyNeeded;
+                totalOmset += itemOmset;
+                totalCost += itemCost;
+
+                itemsSold.push({
+                    productId: id,
+                    name: product.name,
+                    qty: qtyNeeded,
+                    sellingPrice: product.sellingPrice,
+                    costPriceTotal: itemCost
+                });
+
+                if (isFirebaseActive) {
+                    await updateDoc(doc(db, "products", String(id)), { batches: product.batches });
+                }
+            }
+
+            const saleTransaction = {
+                date: new Date().toISOString(),
+                totalOmset,
+                totalCost,
+                profit: totalOmset - totalCost,
+                paymentMethod: document.getElementById('cartPaymentMethod').value,
+                items: itemsSold
+            };
+
+            if (isFirebaseActive) {
+                await addDoc(collection(db, "sales"), saleTransaction);
+            } else {
+                window.state.sales.push(saleTransaction);
+                saveToLocalStorage();
+                renderProducts();
+            }
+
+            window.state.cart = {};
+            updateCartBadge();
+            closeModal('cartModal');
+            alert("Transaksi Berhasil!");
+        }
+
+        // Expense & Report Handlers
+        window.handleAddExpense = async function(e) {
+            e.preventDefault();
+            const desc = document.getElementById('expenseDesc').value.trim();
+            const amount = Number(document.getElementById('expenseAmount').value);
+
+            const expData = {
+                desc,
+                amount,
+                date: new Date().toISOString()
+            };
+
+            if (isFirebaseActive) {
+                await addDoc(collection(db, "expenses"), expData);
+            } else {
+                window.state.expenses.push(expData);
+                saveToLocalStorage();
+            }
+
+            closeModal('expenseModal');
+            document.getElementById('expenseForm').reset();
+            renderReports();
+        }
+
+        window.openReportModal = function() {
+            renderReports();
+            openModal('reportModal');
+        }
+
+        function renderReports() {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            // Daily Calculations
+            const dailySales = window.state.sales.filter(s => s.date.startsWith(todayStr));
+            const dailyOmset = dailySales.reduce((sum, s) => sum + s.totalOmset, 0);
+            const dailyModal = dailySales.reduce((sum, s) => sum + s.totalCost, 0);
+
+            const dailyExpensesList = window.state.expenses.filter(e => e.date.startsWith(todayStr));
+            const dailyExpenseTotal = dailyExpensesList.reduce((sum, e) => sum + e.amount, 0);
+
+            const dailyProfit = dailyOmset - dailyModal - dailyExpenseTotal;
+
+            // Monthly Calculations
+            const monthlySales = window.state.sales.filter(s => {
+                const d = new Date(s.date);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+            const monthlyOmset = monthlySales.reduce((sum, s) => sum + s.totalOmset, 0);
+            const monthlyModal = monthlySales.reduce((sum, s) => sum + s.totalCost, 0);
+
+            const monthlyExpensesList = window.state.expenses.filter(e => {
+                const d = new Date(e.date);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+            const monthlyExpenseTotal = monthlyExpensesList.reduce((sum, e) => sum + e.amount, 0);
+
+            const monthlyProfit = monthlyOmset - monthlyModal - monthlyExpenseTotal;
+
+            // Update UI
+            document.getElementById('dailyOmset').innerText = `Rp ${dailyOmset.toLocaleString('id-ID')}`;
+            document.getElementById('dailyModal').innerText = `Rp ${dailyModal.toLocaleString('id-ID')}`;
+            document.getElementById('dailyExpense').innerText = `Rp ${dailyExpenseTotal.toLocaleString('id-ID')}`;
+            document.getElementById('dailyProfit').innerText = `Rp ${dailyProfit.toLocaleString('id-ID')}`;
+
+            document.getElementById('monthlyOmset').innerText = `Rp ${monthlyOmset.toLocaleString('id-ID')}`;
+            document.getElementById('monthlyModal').innerText = `Rp ${monthlyModal.toLocaleString('id-ID')}`;
+            document.getElementById('monthlyExpense').innerText = `Rp ${monthlyExpenseTotal.toLocaleString('id-ID')}`;
+            document.getElementById('monthlyProfit').innerText = `Rp ${monthlyProfit.toLocaleString('id-ID')}`;
+        }
+    </script>
+</body>
+</html>
