@@ -12,47 +12,68 @@
             const loginForm = document.getElementById('loginForm');
             const signupForm = document.getElementById('signupForm');
             const subtitle = document.getElementById('authSubtitle');
-        
+    
             if (tab === 'signup') {
                 loginForm.classList.add('hidden');
                 signupForm.classList.remove('hidden');
-                subtitle.innerText = 'Buat akun baru untuk toko Anda';
+                subtitle.innerText = 'Buat akun baru & verifikasi email Anda';
             } else {
                 signupForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
                 subtitle.innerText = 'Silakan masuk ke akun Anda';
             }
         }
-        
-        // 1. Fungsi Proses LOGIN
+    
+        // 1. Proses LOGIN (Dicek apakah email sudah diverifikasi)
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-        
+    
             try {
-                await window.FB.signInWithEmailAndPassword(window.FB.auth, email, password);
+                const userCredential = await window.FB.signInWithEmailAndPassword(window.FB.auth, email, password);
+                const user = userCredential.user;
+    
+                // CEK STATUS VERIFIKASI EMAIL
+                if (!user.emailVerified) {
+                    // Jika belum verifikasi, langsung keluarkan kembali (logout)
+                    await window.FB.signOut(window.FB.auth);
+                    showCustomAlert("Email belum diverifikasi! Silakan cek link verifikasi yang dikirim ke email Anda terlebih dahulu.", "Akses Ditolak", "error");
+                    return;
+                }
+    
                 showCustomAlert("Berhasil masuk!", "Berhasil", "success");
             } catch (err) {
                 showCustomAlert("Gagal login: " + err.message, "Error Login", "error");
             }
         }
-        
-        // 2. Fungsi Proses BUAT AKUN BARU (REGISTER)
+    
+        // 2. Proses REGISTER (Kirim Email Verifikasi Otomatis)
         async function handleRegister(e) {
             e.preventDefault();
             const email = document.getElementById('regEmail').value;
             const password = document.getElementById('regPassword').value;
-        
+    
             try {
-                await window.FB.createUserWithEmailAndPassword(window.FB.auth, email, password);
-                showCustomAlert("Akun berhasil dibuat dan otomatis terhubung!", "Berhasil", "success");
+                // Buat akun baru
+                const userCredential = await window.FB.createUserWithEmailAndPassword(window.FB.auth, email, password);
+                
+                // Kirim email verifikasi ke email tersebut
+                await window.FB.sendEmailVerification(userCredential.user);
+                
+                // Logout otomatis agar tidak langsung masuk sebelum verifikasi
+                await window.FB.signOut(window.FB.auth);
+    
+                showCustomAlert("Pendaftaran berhasil! Link verifikasi telah dikirim ke email Anda. Silakan cek inbox/spam, lalu login setelah verifikasi.", "Cek Email Anda", "success");
+                
+                // Pindahkan kembali ke form login
+                switchAuthTab('login');
             } catch (err) {
                 showCustomAlert("Gagal membuat akun: " + err.message, "Error Register", "error");
             }
         }
-        
-        // 3. Fungsi Proses LOGOUT
+    
+        // 3. Proses LOGOUT
         async function handleLogout() {
             try {
                 await window.FB.signOut(window.FB.auth);
@@ -61,39 +82,21 @@
                 showCustomAlert("Gagal logout: " + err.message, "Error", "error");
             }
         }
-        
-        // 4. Listener Pemantau Status Sesi (Buka/Tutup Layar Auth Otomatis)
+    
+        // 4. Listener Pemantau Status Sesi
         window.addEventListener('load', () => {
             if (window.FB && window.FB.auth) {
                 window.FB.onAuthStateChanged(window.FB.auth, (user) => {
                     const authBox = document.getElementById('authContainer');
-                    if (user) {
-                        // Pengguna Sudah Login -> Sembunyikan Layar Auth
+                    if (user && user.emailVerified) {
+                        // Hanya buka dashboard jika sudah login DAN emailnya sudah diverifikasi
                         authBox.classList.add('hidden');
                     } else {
-                        // Pengguna Belum Login / Logout -> Tampilkan Layar Auth
                         authBox.classList.remove('hidden');
                     }
                 });
             }
         });
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#fff7ed',
-                            100: '#ffedd5',
-                            200: '#fed7aa',
-                            500: '#f97316',
-                            600: '#ea580c',
-                            700: '#c2410c',
-                            800: '#9a3412',
-                        }
-                    }
-                }
-            }
-        }
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
@@ -110,7 +113,8 @@
         createUserWithEmailAndPassword, 
         signInWithEmailAndPassword, 
         signOut, 
-        onAuthStateChanged 
+        onAuthStateChanged,
+        sendEmailVerification 
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
     // CONFIG FIREBASE - Proyek Victoria
@@ -152,7 +156,8 @@
         createUserWithEmailAndPassword,
         signInWithEmailAndPassword,
         signOut,
-        onAuthStateChanged
+        onAuthStateChanged,
+        sendEmailVerification
     };
 </script>
 </head>
