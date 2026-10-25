@@ -7,6 +7,76 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Pindah Tampilan Form (Login <-> Register)
+        function switchAuthTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const subtitle = document.getElementById('authSubtitle');
+        
+            if (tab === 'signup') {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                subtitle.innerText = 'Buat akun baru untuk toko Anda';
+            } else {
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                subtitle.innerText = 'Silakan masuk ke akun Anda';
+            }
+        }
+        
+        // 1. Fungsi Proses LOGIN
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+        
+            try {
+                await window.FB.signInWithEmailAndPassword(window.FB.auth, email, password);
+                showCustomAlert("Berhasil masuk!", "Berhasil", "success");
+            } catch (err) {
+                showCustomAlert("Gagal login: " + err.message, "Error Login", "error");
+            }
+        }
+        
+        // 2. Fungsi Proses BUAT AKUN BARU (REGISTER)
+        async function handleRegister(e) {
+            e.preventDefault();
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+        
+            try {
+                await window.FB.createUserWithEmailAndPassword(window.FB.auth, email, password);
+                showCustomAlert("Akun berhasil dibuat dan otomatis terhubung!", "Berhasil", "success");
+            } catch (err) {
+                showCustomAlert("Gagal membuat akun: " + err.message, "Error Register", "error");
+            }
+        }
+        
+        // 3. Fungsi Proses LOGOUT
+        async function handleLogout() {
+            try {
+                await window.FB.signOut(window.FB.auth);
+                showCustomAlert("Anda telah keluar dari akun.", "Info", "info");
+            } catch (err) {
+                showCustomAlert("Gagal logout: " + err.message, "Error", "error");
+            }
+        }
+        
+        // 4. Listener Pemantau Status Sesi (Buka/Tutup Layar Auth Otomatis)
+        window.addEventListener('load', () => {
+            if (window.FB && window.FB.auth) {
+                window.FB.onAuthStateChanged(window.FB.auth, (user) => {
+                    const authBox = document.getElementById('authContainer');
+                    if (user) {
+                        // Pengguna Sudah Login -> Sembunyikan Layar Auth
+                        authBox.classList.add('hidden');
+                    } else {
+                        // Pengguna Belum Login / Logout -> Tampilkan Layar Auth
+                        authBox.classList.remove('hidden');
+                    }
+                });
+            }
+        });
         tailwind.config = {
             theme: {
                 extend: {
@@ -31,49 +101,112 @@
     </style>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getFirestore, collection, addDoc, doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+        getFirestore, collection, addDoc, doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { 
+        getAuth, 
+        createUserWithEmailAndPassword, 
+        signInWithEmailAndPassword, 
+        signOut, 
+        onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // CONFIG FIREBASE - Proyek Victoria
-        const firebaseConfig = {
-            apiKey: "AIzaSyBCriCkSjNty-L6E1Uh-dh6qFlaJaby0ZQ",
-            authDomain: "victoria-ba251.firebaseapp.com",
-            projectId: "victoria-ba251",
-            storageBucket: "victoria-ba251.firebasestorage.app",
-            messagingSenderId: "392462126158",
-            appId: "1:392462126158:web:45d2bb19d6823a5bb7c71f",
-            measurementId: "G-6R4E3NEJ55"
-        };
+    // CONFIG FIREBASE - Proyek Victoria
+    const firebaseConfig = {
+        apiKey: "AIzaSyBCriCkSjNty-L6E1Uh-dh6qFlaJaby0ZQ",
+        authDomain: "victoria-ba251.firebaseapp.com",
+        projectId: "victoria-ba251",
+        storageBucket: "victoria-ba251.firebasestorage.app",
+        messagingSenderId: "392462126158",
+        appId: "1:392462126158:web:45d2bb19d6823a5bb7c71f",
+        measurementId: "G-6R4E3NEJ55"
+    };
 
-        let db = null;
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            console.log("Firebase initialized successfully with Victoria project.");
-        } catch (e) {
-            console.error("Firebase init error:", e);
-        }
+    let db = null;
+    let auth = null;
 
-        // Expose Firebase DB & Helper Functions to global scope
-        window.FB = {
-            db,
-            collection,
-            addDoc,
-            doc,
-            setDoc,
-            getDocs,
-            updateDoc,
-            deleteDoc,
-            onSnapshot
-        };
-    </script>
+    try {
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        console.log("Firebase & Auth initialized successfully.");
+    } catch (e) {
+        console.error("Firebase init error:", e);
+    }
+
+    // Expose Auth & Firestore ke Window Global
+    window.FB = {
+        db,
+        auth,
+        collection,
+        addDoc,
+        doc,
+        setDoc,
+        getDocs,
+        updateDoc,
+        deleteDoc,
+        onSnapshot,
+        // Fungsi Auth
+        createUserWithEmailAndPassword,
+        signInWithEmailAndPassword,
+        signOut,
+        onAuthStateChanged
+    };
+</script>
 </head>
 <body class="bg-amber-50/40 text-slate-800 min-h-screen pb-20">
-
+    <!-- Container Layar Autentikasi (Login & Bikin Akun) -->
+    <div id="authContainer" class="fixed inset-0 bg-gradient-to-br from-orange-600 via-amber-600 to-orange-700 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 space-y-6">
+            <div class="text-center">
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">Melati Residence</h2>
+                <p id="authSubtitle" class="text-xs text-slate-500 mt-1">Silakan masuk ke akun Anda</p>
+            </div>
+    
+            <!-- FORM LOGIN -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                    <input type="email" id="loginEmail" required placeholder="admin@melati.com" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl shadow-lg transition">
+                    Masuk ke Sistem
+                </button>
+                <p class="text-center text-xs text-slate-500 pt-2">
+                    Belum punya akun? <a href="#" onclick="switchAuthTab('signup')" class="text-brand-600 font-bold hover:underline">Buat Akun Baru</a>
+                </p>
+            </form>
+    
+            <!-- FORM BUAT AKUN (SIGN UP) -->
+            <form id="signupForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Email Baru</label>
+                    <input type="email" id="regEmail" required placeholder="kasir@melati.com" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Password Baru</label>
+                    <input type="password" id="regPassword" required placeholder="Minimal 6 karakter" class="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg transition">
+                    Daftar & Buat Akun
+                </button>
+                <p class="text-center text-xs text-slate-500 pt-2">
+                    Sudah punya akun? <a href="#" onclick="switchAuthTab('login')" class="text-brand-600 font-bold hover:underline">Kembali ke Login</a>
+                </p>
+            </form>
+        </div>
+    </div>
     <!-- Header & Navigation Bar -->
     <header class="bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 text-white sticky top-0 z-30 shadow-lg">
+        <button onclick="handleLogout()" class="bg-rose-600/80 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+            Keluar (Logout)
+        </button>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
