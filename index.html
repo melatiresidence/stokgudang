@@ -510,7 +510,33 @@
                         + Catat Pengeluaran Toko
                     </button>
                 </div>
-
+                <!-- Filter Bulan & Tahun di Laporan -->
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-amber-100 flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-slate-700">Pilih Periode Laporan:</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <!-- Dropdown Bulan -->
+                        <select id="filterBulan" onchange="filterLaporanBulan()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none bg-slate-50 font-medium">
+                            <option value="0">Januari</option>
+                            <option value="1">Februari</option>
+                            <option value="2">Maret</option>
+                            <option value="3">April</option>
+                            <option value="4">Mei</option>
+                            <option value="5">Juni</option>
+                            <option value="6">Juli</option>
+                            <option value="7">Agustus</option>
+                            <option value="8">September</option>
+                            <option value="9">Oktober</option>
+                            <option value="10">November</option>
+                            <option value="11">Desember</option>
+                        </select>
+                
+                        <!-- Dropdown Tahun (Dikosongkan karena nanti diisi otomatis oleh JavaScript) -->
+                        <select id="filterTahun" onchange="filterLaporanBulan()" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none bg-slate-50 font-medium">
+                        </select>
+                    </div>
+                </div>
                 <!-- Comparative Daily & Monthly Table -->
                 <div class="border border-slate-200 rounded-2xl overflow-hidden">
                     <table class="w-full text-left text-xs">
@@ -1286,7 +1312,55 @@
             link.click();
             document.body.removeChild(link);
         }
-
+        // 1. Generate otomatis tahun mulai dari 2026 ke atas saat halaman dimuat
+        window.addEventListener('load', () => {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const elTahun = document.getElementById('filterTahun');
+            const elBulan = document.getElementById('filterBulan');
+            
+            if (elTahun) {
+                elTahun.innerHTML = ''; // Kosongkan dulu
+                
+                const startYear = 2026; // Kunci awal mulai tahun 2026
+                const maxYear = Math.max(currentYear, 2027); // Otomatis mengikuti tahun berjalan
+        
+                for (let y = startYear; y <= maxYear; y++) {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.innerText = y;
+                    // Pilih otomatis tahun saat ini
+                    if (y === currentYear) {
+                        opt.selected = true;
+                    }
+                    elTahun.appendChild(opt);
+                }
+            }
+        
+            if (elBulan) {
+                elBulan.value = today.getMonth(); // Set ke bulan aktif saat ini
+            }
+        });
+        
+        // 2. Fungsi Filter Data Berdasarkan Bulan & Tahun Pilihan
+        function filterLaporanBulan() {
+            const bulanDipilih = parseInt(document.getElementById('filterBulan').value);
+            const tahunDipilih = parseInt(document.getElementById('filterTahun').value);
+        
+            // Pastikan variabel penampung data transaksi dari database kamu sudah ada (misal: allTransactions)
+            if (typeof allTransactions === 'undefined' || !allTransactions) return;
+        
+            // Saring data transaksi berdasarkan bulan dan tahun
+            const filteredData = allTransactions.filter(item => {
+                const tgl = item.timestamp ? item.timestamp.toDate() : new Date(item.createdAt || item.date);
+                return tgl.getMonth() === bulanDipilih && tgl.getFullYear() === tahunDipilih;
+            });
+        
+            // Perbarui tampilan tabel laporan kamu (pastikan fungsi render ini sesuai dengan yang ada di aplikasimu)
+            if (typeof renderTabelLaporan === 'function') {
+                renderTabelLaporan(filteredData);
+            }
+        }
         // Modal Controls
         window.openModal = function(id) {
             if (id === 'restockModal') {
