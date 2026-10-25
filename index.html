@@ -30,14 +30,19 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 
+    <!-- Firebase SDK Modules -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getFirestore, collection, addDoc, doc, setDoc, getDocs, updateDoc, deleteDoc, onSnapshot 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // CONFIG FIREBASE - Proyek Melati Residence
-        const firebaseConfig = {
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import { 
+        getFirestore, 
+        collection, 
+        onSnapshot, 
+        addDoc, 
+        enableIndexedDbPersistence 
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    
+      // Konfigurasi dari proyek Victoria kamu
+      const firebaseConfig = {
             apiKey: "AIzaSyBCriCkSjNty-L6E1Uh-dh6qFlaJaby0ZQ",
             authDomain: "victoria-ba251.firebaseapp.com",
             projectId: "victoria-ba251",
@@ -45,30 +50,28 @@
             messagingSenderId: "392462126158",
             appId: "1:392462126158:web:45d2bb19d6823a5bb7c71f",
             measurementId: "G-6R4E3NEJ55"
-        };
-
-
-        let db = null;
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            console.log("Firebase initialized successfully.");
-        } catch (e) {
-            console.error("Firebase init error:", e);
+      };
+    
+      // 1. Inisialisasi App & Firestore
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+    
+      // 2. Listener Firestore (Memastikan Koneksi Cloud Berhasil)
+      const statusBadge = document.getElementById("status-badge"); // sesuaikan id badge kamu
+    
+      onSnapshot(collection(db, "test_connection"), (snapshot) => {
+        console.log("Firestore Berhasil Terhubung!");
+        if (statusBadge) {
+          statusBadge.innerText = "Firebase Cloud Connected";
+          statusBadge.style.backgroundColor = "#22c55e"; // Warna Hijau
         }
-
-        // Expose Firebase DB & Helper Functions to global scope
-        window.FB = {
-            db,
-            collection,
-            addDoc,
-            doc,
-            setDoc,
-            getDocs,
-            updateDoc,
-            deleteDoc,
-            onSnapshot
-        };
+      }, (error) => {
+        console.error("Firestore Error:", error);
+        if (statusBadge) {
+          statusBadge.innerText = "Koneksi Gagal: " + error.code;
+          statusBadge.style.backgroundColor = "#ef4444"; // Warna Merah
+        }
+      });
     </script>
 </head>
 <body class="bg-amber-50/40 text-slate-800 min-h-screen pb-20">
