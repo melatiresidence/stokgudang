@@ -1103,38 +1103,41 @@
 
             try {
                 // Process FIFO per product
+                // BAGIAN BARU YANG BENAR:
                 for (let cartItem of cart) {
                     const product = products.find(p => p.id === cartItem.productId);
                     if (!product) continue;
-
+                
                     let remainingQty = cartItem.qty;
-
-                    // Sort product batches chronologically for FIFO
+                
                     const prodBatches = batches.filter(b => b.productId === product.id && b.pcs > 0)
                                                .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-
+                
                     for (let b of prodBatches) {
                         if (remainingQty <= 0) break;
-
+                
                         const take = Math.min(b.pcs, remainingQty);
                         b.pcs -= take;
                         remainingQty -= take;
-
+                
                         saleItems.push({
-                            productId: product.id,
+                            productId: product.id, // Menyimpan string ID murni, bukan referensi dokumen
                             name: product.name,
                             pcs: take,
                             salesPrice: product.salesPrice,
                             costPrice: b.costPrice
                         });
-
-                        // Sync batch update to Firebase
-                        await window.FB.updateDoc(window.FB.doc(window.FB.db, "batches", b.id), { pcs: b.pcs });
+                
+                        // Pastikan path batchest hanya "batches" dan ID batch-nya (2 segmen)
+                        const batchRef = window.FB.doc(window.FB.db, "batches", b.id);
+                        await window.FB.updateDoc(batchRef, { pcs: b.pcs });
                     }
-
-                    // Update product total stock
+                
                     const newStock = product.stock - cartItem.qty;
-                    await window.FB.updateDoc(window.FB.doc(window.FB.doc(window.FB.db, "products", product.id)), { stock: newStock });
+                    
+                    // Pastikan path products hanya "products" dan ID produknya (2 segmen: "products", product.id)
+                    const productRef = window.FB.doc(window.FB.db, "products", product.id);
+                    await window.FB.updateDoc(productRef, { stock: newStock });
                 }
 
                 const newSale = {
